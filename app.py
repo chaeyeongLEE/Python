@@ -16,11 +16,11 @@ def refresh_data():
     time.sleep(0.3)
     st.rerun()
 
-
-# DB 조회 함수 대신 더미 데이터 반환 (캐싱, 10분 TTL)
+# --------------------------------------------------------------------
+#  더미 데이터 (DB 연결 없이 동작)
+# --------------------------------------------------------------------
 @st.cache_data(ttl=600)
 def fetch_members():
-    # 원래는 DB(SessionLocal)에서 Member 조회 → 더미 리스트로 대체
     dummy_members = [
         SimpleNamespace(
             id=1,
@@ -46,7 +46,6 @@ def fetch_members():
 
 @st.cache_data(ttl=600)
 def fetch_submissions():
-    # 원래는 DB에서 Submission 조회 → 더미 리스트로 대체
     dummy_subs = [
         SimpleNamespace(
             id=1,
@@ -59,22 +58,18 @@ def fetch_submissions():
             coupon_used=True,
             agree_privacy=True,
             confirm_info=True,
-            stores=json.dumps(
-                [
-                    {"name": "서울 1호점", "period": "2020-01 ~ 2023-01"},
-                    {"name": "서울 2호점", "period": "2021-05 ~ 2024-01"},
-                ]
-            ),
-            applicants=json.dumps(
-                [
-                    {
-                        "name": "홍길동",
-                        "phone": "010-1234-5678",
-                        "ssn": "900101-1234567",
-                        "address": "서울특별시 어딘가 1-1",
-                    }
-                ]
-            ),
+            stores=json.dumps([
+                {"name": "서울 1호점", "period": "2020-01 ~ 2023-01"},
+                {"name": "서울 2호점", "period": "2021-05 ~ 2024-01"},
+            ]),
+            applicants=json.dumps([
+                {
+                    "name": "홍길동",
+                    "phone": "010-1234-5678",
+                    "ssn": "900101-1234567",
+                    "address": "서울특별시 어딘가 1-1",
+                }
+            ]),
             created_at=datetime(2025, 11, 3, 9, 0, 0),
             status="APPLIED",
             litigation="배민 가맹점 수수료 소송",
@@ -90,21 +85,17 @@ def fetch_submissions():
             coupon_used=False,
             agree_privacy=True,
             confirm_info=True,
-            stores=json.dumps(
-                [
-                    {"name": "경기 1호점", "period": "2019-03 ~ 2022-12"},
-                ]
-            ),
-            applicants=json.dumps(
-                [
-                    {
-                        "name": "김철수",
-                        "phone": "010-2222-3333",
-                        "ssn": "910202-2345678",
-                        "address": "경기도 어딘가 2-2",
-                    }
-                ]
-            ),
+            stores=json.dumps([
+                {"name": "경기 1호점", "period": "2019-03 ~ 2022-12"}
+            ]),
+            applicants=json.dumps([
+                {
+                    "name": "김철수",
+                    "phone": "010-2222-3333",
+                    "ssn": "910202-2345678",
+                    "address": "경기도 어딘가 2-2",
+                }
+            ]),
             created_at=datetime(2025, 11, 5, 15, 30, 0),
             status="UNDER_REVIEW",
             litigation="쿠팡이츠 가맹점 수수료 소송",
@@ -112,19 +103,16 @@ def fetch_submissions():
     ]
     return dummy_subs
 
-
-# 엑셀 변환 함수 (원본 그대로)
+# --------------------------------------------------------------------
+# 엑셀 변환 함수
+# --------------------------------------------------------------------
 def to_excel_bytes(df: pd.DataFrame) -> bytes:
     export_df = df.copy()
 
     if "가입일" in export_df.columns:
-        export_df["가입일"] = pd.to_datetime(export_df["가입일"]).dt.strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        export_df["가입일"] = pd.to_datetime(export_df["가입일"]).dt.strftime("%Y-%m-%d %H:%M:%S")
     if "접수일시" in export_df.columns:
-        export_df["접수일시"] = pd.to_datetime(export_df["접수일시"]).dt.strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
+        export_df["접수일시"] = pd.to_datetime(export_df["접수일시"]).dt.strftime("%Y-%m-%d %H:%M:%S")
 
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
@@ -133,14 +121,13 @@ def to_excel_bytes(df: pd.DataFrame) -> bytes:
         ws = writer.sheets["data"]
         for col in ws.columns:
             max_len = max(len(str(c.value)) if c.value is not None else 0 for c in col)
-            ws.column_dimensions[col[0].column_letter].width = max(
-                12, min(max_len + 2, 40)
-            )
+            ws.column_dimensions[col[0].column_letter].width = max(12, min(max_len + 2, 40))
 
     return buffer.getvalue()
 
-
-# 포맷터: 신청인 / 점포 (원본 그대로)
+# --------------------------------------------------------------------
+# 포맷터
+# --------------------------------------------------------------------
 def format_applicants(v):
     if v is None:
         return ""
@@ -153,31 +140,9 @@ def format_applicants(v):
     if isinstance(v, list):
         parts = []
         for a in v:
-            if not isinstance(a, dict):
-                continue
-
-            name = a.get("name", "")
-            phone = a.get("phone", "")
-            ssn = a.get("ssn", "")
-            address = a.get("address", "")
-
-            inside = []
-            if phone:
-                inside.append(phone)
-            if ssn:
-                inside.append(ssn)
-            if address:
-                inside.append(address)
-
-            inside_text = ", ".join(inside)
-
-            if inside_text:
-                parts.append(f"{name}({inside_text})")
-            else:
-                parts.append(name)
-
-        return ", ".join([p for p in parts if p])
-
+            inside = ", ".join([x for x in [a.get("phone"), a.get("ssn"), a.get("address")] if x])
+            parts.append(f"{a.get('name')}({inside})" if inside else a.get("name"))
+        return ", ".join(parts)
     return str(v)
 
 
@@ -189,19 +154,12 @@ def format_stores(v):
             v = json.loads(v)
         except Exception:
             return v
-    if isinstance(v, list):
-        parts = []
-        for s in v:
-            if not isinstance(s, dict):
-                continue
-            name = s.get("name", "")
-            period = s.get("period", "")
-            parts.append(f"{name}({period})" if period else name)
-        return ", ".join([p for p in parts if p])
-    return str(v)
+    parts = []
+    for s in v:
+        parts.append(f"{s.get('name')}({s.get('period')})" if s.get("period") else s.get("name"))
+    return ", ".join(parts)
 
 
-# 상태 :: 한글 DB Enum 매핑 (원본 그대로)
 STATUS_KR_TO_DB = {
     "접수완료": "APPLIED",
     "검토중": "UNDER_REVIEW",
@@ -212,36 +170,37 @@ STATUS_KR_TO_DB = {
 }
 STATUS_DB_TO_KR = {v: k for k, v in STATUS_KR_TO_DB.items()}
 
-
-# 메인 레이아웃
+# --------------------------------------------------------------------
+# UI 시작
+# --------------------------------------------------------------------
 st.title("YK 집단소송 관리자 페이지 (Mock UI)")
 
 tab1, tab2 = st.tabs(["회원명단", "신청명단"])
 
-# 회원명단 (Members) 탭
+# --------------------------------------------------------------------
+# 회원 탭
+# --------------------------------------------------------------------
 with tab1:
     col_title, col_refresh = st.columns([1, 0.15])
     with col_title:
-        st.subheader("회원 목록)")
+        st.subheader("회원 목록")   # ) 제거됨
     with col_refresh:
         if st.button("새로 불러오기", key="refresh_members"):
             refresh_data()
 
     members = fetch_members()
-    df_members = pd.DataFrame(
-        [
-            {
-                "id": m.id,
-                "email": m.email,
-                "name": m.name,
-                "phone": m.phone,
-                "ssn": m.ssn,
-                "address": getattr(m, "address", None),
-                "created_at": m.created_at,
-            }
-            for m in members
-        ]
-    )
+    df_members = pd.DataFrame([
+        {
+            "id": m.id,
+            "email": m.email,
+            "name": m.name,
+            "phone": m.phone,
+            "ssn": m.ssn,
+            "address": m.address,
+            "created_at": m.created_at,
+        }
+        for m in members
+    ])
 
     q = st.text_input("검색 (email, name)", "")
     if q:
@@ -259,9 +218,9 @@ with tab1:
         "address": "주소",
         "created_at": "가입일",
     }
+
     df_members_view = df_members.rename(columns=MEMBER_LABELS)
 
-    # 명단 버전 관리 목적 :: 엑셀 파일명에 날짜/시간 붙이기 (YYYYMMDD-HHMM)
     now_str = datetime.now().strftime("%Y%m%d-%H%M")
 
     col_dl, _ = st.columns(2)
@@ -286,20 +245,19 @@ with tab1:
     if selected:
         m = next((x for x in members if x.name == selected), None)
         if m:
-            st.json(
-                {
-                    "ID": m.id,
-                    "이메일": m.email,
-                    "이름": m.name,
-                    "휴대폰": m.phone,
-                    "주민번호": m.ssn,
-                    "주소": getattr(m, "address", None),
-                    "가입일": str(m.created_at),
-                }
-            )
+            st.json({
+                "ID": m.id,
+                "이메일": m.email,
+                "이름": m.name,
+                "휴대폰": m.phone,
+                "주민번호": m.ssn,
+                "주소": m.address,
+                "가입일": str(m.created_at),
+            })
 
-
-# 신청명단(Submissions) 탭
+# --------------------------------------------------------------------
+# 신청명단 탭
+# --------------------------------------------------------------------
 with tab2:
     col_title, col_refresh = st.columns([1, 0.15])
     with col_title:
@@ -309,29 +267,28 @@ with tab2:
             refresh_data()
 
     subs = fetch_submissions()
-    df_subs = pd.DataFrame(
-        [
-            {
-                "id": s.id,
-                "member_email": s.member_email,
-                "intention": s.intention,
-                "address": s.address,
-                "email": s.email,
-                "franchise": s.franchise,
-                "backup_phone": s.backup_phone,
-                "coupon_used": s.coupon_used,
-                "agree_privacy": s.agree_privacy,
-                "confirm_info": s.confirm_info,
-                "stores": s.stores,
-                "applicants": s.applicants,
-                "created_at": s.created_at,
-                "status": s.status,
-                "litigation": s.litigation,
-            }
-            for s in subs
-        ]
-    )
+    df_subs = pd.DataFrame([
+        {
+            "id": s.id,
+            "member_email": s.member_email,
+            "intention": s.intention,
+            "address": s.address,
+            "email": s.email,
+            "franchise": s.franchise,
+            "backup_phone": s.backup_phone,
+            "coupon_used": s.coupon_used,
+            "agree_privacy": s.agree_privacy,
+            "confirm_info": s.confirm_info,
+            "stores": s.stores,
+            "applicants": s.applicants,
+            "created_at": s.created_at,
+            "status": s.status,
+            "litigation": s.litigation,
+        }
+        for s in subs
+    ])
 
+    # 검색 필터
     col1, col2, col3 = st.columns(3)
     with col1:
         email_filter = st.text_input("회원 이메일 검색", "")
@@ -341,26 +298,14 @@ with tab2:
         franchise_filter = st.text_input("프랜차이즈별 검색", "")
 
     if email_filter:
-        df_subs = df_subs[
-            df_subs["member_email"].str.contains(email_filter, case=False, na=False)
-        ]
+        df_subs = df_subs[df_subs["member_email"].str.contains(email_filter, case=False, na=False)]
     if litigation_filter:
-        df_subs = df_subs[
-            df_subs["litigation"]
-            .astype(str)
-            .str.contains(litigation_filter, case=False, na=False)
-        ]
+        df_subs = df_subs[df_subs["litigation"].astype(str).str.contains(litigation_filter, case=False, na=False)]
     if franchise_filter:
-        df_subs = df_subs[
-            df_subs["franchise"]
-            .astype(str)
-            .str.contains(franchise_filter, case=False, na=False)
-        ]
+        df_subs = df_subs[df_subs["franchise"].astype(str).str.contains(franchise_filter, case=False, na=False)]
 
-    if "applicants" in df_subs.columns:
-        df_subs["applicants"] = df_subs["applicants"].apply(format_applicants)
-    if "stores" in df_subs.columns:
-        df_subs["stores"] = df_subs["stores"].apply(format_stores)
+    df_subs["applicants"] = df_subs["applicants"].apply(format_applicants)
+    df_subs["stores"] = df_subs["stores"].apply(format_stores)
 
     SUB_LABELS = {
         "id": "ID",
@@ -384,18 +329,14 @@ with tab2:
 
     now_str = datetime.now().strftime("%Y%m%d-%H%M")
     col_dl, col_count = st.columns([1, 0.5])
-    total_applicants = 0
 
-    # 전체 신청인수
+    total_applicants = 0
     for s in subs:
         try:
-            apps = s.applicants
-            if isinstance(apps, str):
-                apps = json.loads(apps)
-
+            apps = json.loads(s.applicants) if isinstance(s.applicants, str) else s.applicants
             if isinstance(apps, list):
                 total_applicants += len(apps)
-        except Exception:
+        except:
             pass
 
     with col_dl:
@@ -405,7 +346,6 @@ with tab2:
             file_name=f"{now_str}_신청명단.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-
     with col_count:
         st.info(f"전체 신청인 수: **{total_applicants}명**")
 
@@ -421,78 +361,51 @@ with tab2:
 
     if selected_email:
         s = next((x for x in subs if x.email == selected_email), None)
-
         if s:
             col_detail, col_edit = st.columns([1, 1])
 
             with col_detail:
                 st.markdown("**현재 신청 정보 (더미)**")
-                st.json(
-                    {
-                        "ID": s.id,
-                        "회원이메일": s.member_email,
-                        "의뢰의도": s.intention,
-                        "주소": s.address,
-                        "이메일": s.email,
-                        "프랜차이즈명": s.franchise,
-                        "비상연락처": s.backup_phone,
-                        "쿠폰사용여부": s.coupon_used,
-                        "개인정보동의": s.agree_privacy,
-                        "회원가입동의": s.confirm_info,
-                        "점포/운영정보": s.stores,
-                        "신청인": s.applicants,
-                        "사건": s.litigation,
-                        "상태(원본 Enum)": s.status,
-                        "접수일시": str(s.created_at),
-                    }
-                )
+                st.json({
+                    "ID": s.id,
+                    "회원이메일": s.member_email,
+                    "의뢰의도": s.intention,
+                    "주소": s.address,
+                    "이메일": s.email,
+                    "프랜차이즈명": s.franchise,
+                    "비상연락처": s.backup_phone,
+                    "쿠폰사용여부": s.coupon_used,
+                    "개인정보동의": s.agree_privacy,
+                    "회원가입동의": s.confirm_info,
+                    "점포/운영정보": s.stores,
+                    "신청인": s.applicants,
+                    "사건": s.litigation,
+                    "상태(원본 Enum)": s.status,
+                    "접수일시": str(s.created_at),
+                })
 
-            # 제출 정보 수정
             with col_edit:
                 st.markdown("**제출 정보 수정 (UI 데모용, 저장 안 됨)**")
 
                 current_status_kr = STATUS_DB_TO_KR.get(s.status, "접수완료")
                 status_options = list(STATUS_KR_TO_DB.keys())
 
-                new_status_kr = st.selectbox(
+                st.selectbox(
                     "상태",
                     status_options,
                     index=status_options.index(current_status_kr),
                     key=f"status_{s.id}",
                 )
 
-                new_litigation = st.text_input(
-                    "사건",
-                    value=s.litigation or "",
-                    key=f"litigation_{s.id}",
-                )
+                st.text_input("사건", value=s.litigation or "", key=f"litigation_{s.id}")
+                st.text_input("프랜차이즈명", value=s.franchise or "", key=f"franchise_{s.id}")
+                st.text_input("소송참여 희망 여부", value=s.intention or "", key=f"intention_{s.id}")
+                st.text_input("비상연락처", value=s.backup_phone or "", key=f"backup_{s.id}")
+                st.text_input("주소", value=s.address or "", key=f"address_{s.id}")
 
-                new_franchise = st.text_input(
-                    "프랜차이즈명",
-                    value=s.franchise or "",
-                    key=f"franchise_{s.id}",
-                )
+                if st.button("⭳ 수정 사항 저장", key=f"save_{s.id}"):
+                    st.warning("실패 (더미 모드에서는 저장 불가)")
 
-                new_intention = st.text_input(
-                    "소송참여 희망 여부",
-                    value=s.intention or "",
-                    key=f"intention_{s.id}",
-                )
-
-                new_backup_phone = st.text_input(
-                    "비상연락처",
-                    value=s.backup_phone or "",
-                    key=f"backup_{s.id}",
-                )
-
-                new_address = st.text_input(
-                    "주소",
-                    value=s.address or "",
-                    key=f"address_{s.id}",
-                )
-
-               if st.button("⭳ 수정 사항 저장", key=f"save_{s.id}"):
-                    st.warning("실패")
     st.markdown("---")
     st.subheader("일별 접수 수")
 
