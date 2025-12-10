@@ -1,148 +1,105 @@
 import streamlit as st
-import pandas as pd
-import json
-from datetime import datetime
-from io import BytesIO
 
 st.set_page_config(page_title="Admin Mock UI", layout="wide")
 
 # -------------------------------------------------------
-# 더미 데이터
+# 더미 데이터 (pandas 안 쓰기 위해 완전 단순 구조)
 # -------------------------------------------------------
-dummy_members = [
+members = [
     {
-        "id": 1,
-        "email": "demo1@example.com",
-        "name": "홍길동",
-        "phone": "010-1234-5678",
-        "ssn": "900101-1234567",
-        "address": "서울특별시 어딘가 1-1",
-        "created_at": datetime(2025, 11, 1, 10, 0, 0),
+        "ID": 1,
+        "이메일": "demo1@example.com",
+        "이름": "홍길동",
+        "휴대폰": "010-1234-5678",
+        "주민번호": "900101-1234567",
+        "주소": "서울 어딘가 1-1",
+        "가입일": "2025-11-01 10:00",
     },
     {
-        "id": 2,
-        "email": "demo2@example.com",
-        "name": "김철수",
-        "phone": "010-2222-3333",
-        "ssn": "910202-2345678",
-        "address": "경기도 어딘가 2-2",
-        "created_at": datetime(2025, 11, 2, 12, 30, 0),
+        "ID": 2,
+        "이메일": "demo2@example.com",
+        "이름": "김철수",
+        "휴대폰": "010-2222-3333",
+        "주민번호": "910202-2345678",
+        "주소": "경기도 어딘가 2-2",
+        "가입일": "2025-11-02 12:30",
     },
 ]
 
-dummy_subs = [
+submissions = [
     {
-        "id": 1,
-        "member_email": "demo1@example.com",
-        "intention": "소송 참여 희망",
-        "address": "서울특별시 어딘가 1-1",
-        "email": "demo1@example.com",
-        "franchise": "배달의민족",
-        "backup_phone": "010-0000-0000",
-        "coupon_used": True,
-        "agree_privacy": True,
-        "confirm_info": True,
-        "stores": json.dumps([
-            {"name": "서울 1호점", "period": "2020-01 ~ 2023-01"}
-        ]),
-        "applicants": json.dumps([
-            {"name": "홍길동", "phone": "010-1234-5678", "address": "서울특별시 어딘가 1-1"}
-        ]),
-        "created_at": datetime(2025, 11, 3, 9, 0, 0),
-        "status": "APPLIED",
-        "litigation": "배민 수수료 소송",
+        "ID": 1,
+        "회원이메일": "demo1@example.com",
+        "소송의도": "소송 참여 희망",
+        "주소": "서울 어딘가 1-1",
+        "이메일": "demo1@example.com",
+        "프랜차이즈": "배달의민족",
+        "비상연락처": "010-0000-0000",
+        "쿠폰사용": True,
+        "개인정보동의": True,
+        "회원가입동의": True,
+        "점포": "서울1호점(2020~2023)",
+        "신청인": "홍길동(010-1234-5678)",
+        "사건": "배민 수수료 소송",
+        "상태": "접수완료",
+        "접수일시": "2025-11-03 09:00",
     },
     {
-        "id": 2,
-        "member_email": "demo2@example.com",
-        "intention": "관심 있음",
-        "address": "경기도 어딘가 2-2",
-        "email": "demo2@example.com",
-        "franchise": "쿠팡이츠",
-        "backup_phone": "010-9999-8888",
-        "coupon_used": False,
-        "agree_privacy": True,
-        "confirm_info": True,
-        "stores": json.dumps([
-            {"name": "경기 1호점", "period": "2019-03 ~ 2022-12"}
-        ]),
-        "applicants": json.dumps([
-            {"name": "김철수", "phone": "010-2222-3333", "address": "경기도 어딘가 2-2"}
-        ]),
-        "created_at": datetime(2025, 11, 5, 15, 30, 0),
-        "status": "UNDER_REVIEW",
-        "litigation": "쿠팡이츠 수수료 소송",
+        "ID": 2,
+        "회원이메일": "demo2@example.com",
+        "소송의도": "관심 있음",
+        "주소": "경기도 어딘가 2-2",
+        "이메일": "demo2@example.com",
+        "프랜차이즈": "쿠팡이츠",
+        "비상연락처": "010-9999-8888",
+        "쿠폰사용": False,
+        "개인정보동의": True,
+        "회원가입동의": True,
+        "점포": "경기1호점(2019~2022)",
+        "신청인": "김철수(010-2222-3333)",
+        "사건": "쿠팡이츠 수수료 소송",
+        "상태": "검토중",
+        "접수일시": "2025-11-05 15:30",
     },
 ]
 
 # -------------------------------------------------------
-# 엑셀 변환
+# UI
 # -------------------------------------------------------
-def to_excel_bytes(df):
-    buffer = BytesIO()
-    df.to_excel(buffer, index=False)
-    return buffer.getvalue()
-
-# -------------------------------------------------------
-# UI 시작
-# -------------------------------------------------------
-st.title("YK 집단소송 관리자 페이지 (Mock UI - DB 없이 동작)")
+st.title("YK 집단소송 관리자 페이지 (초간단 버전 - 절대 오류 안 남)")
 
 tab1, tab2 = st.tabs(["회원명단", "신청명단"])
 
-# -------------------------------------------------------
+# ================================
 # 회원명단
-# -------------------------------------------------------
+# ================================
 with tab1:
     st.subheader("회원 목록")
 
-    df_members = pd.DataFrame(dummy_members)
+    # 표 보여주기
+    st.table(members)
 
-    q = st.text_input("검색 (email, name)")
-    if q:
-        df_members = df_members[
-            df_members["email"].str.contains(q)
-            | df_members["name"].str.contains(q)
-        ]
+    # 상세보기
+    st.subheader("회원 상세")
+    selected = st.selectbox("회원 선택", [m["이름"] for m in members])
 
-    st.dataframe(df_members, height=400, use_container_width=True)
+    for m in members:
+        if m["이름"] == selected:
+            st.json(m)
 
-    st.download_button(
-        "회원 목록 다운로드",
-        data=to_excel_bytes(df_members),
-        file_name="members.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-
-    st.subheader("회원 상세 보기")
-    selected = st.selectbox("회원 선택", df_members["name"])
-
-    detail = df_members[df_members["name"] == selected].iloc[0]
-    st.json(detail.to_dict())
-
-# -------------------------------------------------------
+# ================================
 # 신청명단
-# -------------------------------------------------------
+# ================================
 with tab2:
-    st.subheader("제출 목록")
+    st.subheader("신청 목록")
 
-    df_subs = pd.DataFrame(dummy_subs)
+    # 표
+    st.table(submissions)
 
-    # 문자열 JSON → 파싱
-    df_subs["stores"] = df_subs["stores"].apply(json.loads)
-    df_subs["applicants"] = df_subs["applicants"].apply(json.loads)
+    # 상세보기
+    st.subheader("신청 상세")
+    selected_email = st.selectbox("이메일 선택", [s["이메일"] for s in submissions])
 
-    st.dataframe(df_subs, height=400, use_container_width=True)
-
-    st.download_button(
-        "신청명단 다운로드",
-        data=to_excel_bytes(df_subs),
-        file_name="submissions.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
-
-    st.subheader("제출 상세")
-    selected_email = st.selectbox("이메일 선택", df_subs["email"])
-
-    detail = df_subs[df_subs["email"] == selected_email].iloc[0]
-    st.json(detail.to_dict())
+    for s in submissions:
+        if s["이메일"] == selected_email:
+            st.json(s)
